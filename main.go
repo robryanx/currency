@@ -34,12 +34,8 @@ func init() {
     to_currency = flag.String("to_currency", "AUD", "currency")
 }
 
-func main() {
-    flag.Parse()
-
-    url := "https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=%s&to_currency=%s&apikey=%s"
-
-    resp, err := http.Get(fmt.Sprintf(url, "USD", *to_currency, os.Getenv("API_KEY")))
+func http_get(url string) []byte {
+    resp, err := http.Get(url)
     if err != nil {
        log.Fatalln(err)
     }
@@ -49,9 +45,25 @@ func main() {
        log.Fatalln(err)
     }
 
+    return body
+}
+
+func Get_exchange(http_get_func func(url string) []byte, api_key string, from_currency string, to_currency string) float64 {
+    url := "https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=%s&to_currency=%s&apikey=%s"
+
+    body := http_get_func(fmt.Sprintf(url, "USD", to_currency, api_key))
+
     var container CurrencyContainer
 
     json.Unmarshal(body, &container)
 
-    Update(container.Conversion.ToCurrency, container.Conversion.ExchangeRate)
+    return container.Conversion.ExchangeRate
+}
+
+func main() {
+    flag.Parse()
+
+    exchange_rate := Get_exchange(http_get, os.Getenv("API_KEY"), "USD", *to_currency)
+
+    Update(*to_currency, exchange_rate)
 }
